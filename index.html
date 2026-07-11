@@ -8,9 +8,9 @@
 <style>
 body{
     margin:0;
+    font-family:Arial,sans-serif;
     background:#111;
     color:#fff;
-    font-family:Arial,sans-serif;
     display:flex;
     justify-content:center;
     align-items:center;
@@ -21,7 +21,7 @@ body{
 
 #app{
     width:100%;
-    max-width:800px;
+    max-width:700px;
     padding:20px;
 }
 
@@ -29,7 +29,7 @@ button,select{
     font-size:18px;
     padding:12px 18px;
     border:none;
-    border-radius:10px;
+    border-radius:8px;
 }
 
 #word{
@@ -43,25 +43,25 @@ button,select{
 }
 
 .good{
-    background:#178848;
+    background:#1f8b4c;
 }
 
 .bad{
-    background:#982222;
-}
-
-#timer{
-    font-size:32px;
+    background:#8b1f1f;
 }
 
 .small{
     opacity:.8;
 }
 
+#timer{
+    font-size:30px;
+}
+
 #debug{
-    margin-top:10px;
-    opacity:.6;
+    margin-top:12px;
     font-size:13px;
+    opacity:.7;
 }
 </style>
 </head>
@@ -70,13 +70,12 @@ button,select{
 <div id="app">
 
     <div id="menu">
-
         <h1>Quem Sou Eu?</h1>
 
         <p>
-            Incline rapidamente para frente = Acertou
+            Incline para frente = Acertou
             <br>
-            Incline rapidamente para trás = Passou
+            Incline para trás = Passou
         </p>
 
         <select id="cat"></select>
@@ -86,7 +85,6 @@ button,select{
         <button id="start">
             Jogar
         </button>
-
     </div>
 
     <div id="game" class="hidden">
@@ -127,46 +125,46 @@ button,select{
 
 const db = {
 
-    Animais:[
+    "Animais":[
         "Leão","Elefante","Cachorro","Gato","Girafa",
         "Zebra","Pinguim","Tubarão","Baleia","Macaco"
     ],
 
-    Filmes:[
+    "Filmes":[
         "Titanic","Avatar","Matrix","Interestelar",
         "Gladiador","Shrek","Toy Story","Frozen",
         "Batman","Superman"
     ],
 
-    Objetos:[
+    "Objetos":[
         "Computador","Celular","Cadeira","Caneta",
         "Livro","Martelo","Relógio","Violão",
         "Microfone","Guarda-chuva"
     ],
 
-    Comidas:[
+    "Comidas":[
         "Pizza","Sushi","Hambúrguer","Feijoada",
         "Lasanha","Sorvete","Chocolate",
         "Pipoca","Pastel","Maçã"
     ]
 };
 
-const menu = document.getElementById("menu");
-const game = document.getElementById("game");
-const endDiv = document.getElementById("end");
-
-const word = document.getElementById("word");
-const score = document.getElementById("score");
-const timerEl = document.getElementById("timer");
-const result = document.getElementById("result");
-const lists = document.getElementById("lists");
-const debug = document.getElementById("debug");
-
-const sel = document.getElementById("cat");
+const sel=document.getElementById("cat");
 
 Object.keys(db).forEach(c=>{
     sel.add(new Option(c,c));
 });
+
+const menu=document.getElementById("menu");
+const game=document.getElementById("game");
+const endDiv=document.getElementById("end");
+
+const word=document.getElementById("word");
+const score=document.getElementById("score");
+const timerEl=document.getElementById("timer");
+const result=document.getElementById("result");
+const lists=document.getElementById("lists");
+const debug=document.getElementById("debug");
 
 let words=[];
 let current="";
@@ -177,15 +175,10 @@ let skip=[];
 let timer;
 let time=60;
 
-let actionLock=false;
-
-function shuffle(a){
-
-    for(let i=a.length-1;i>0;i--){
-
+function shuffle(arr){
+    for(let i=arr.length-1;i>0;i--){
         const j=Math.floor(Math.random()*(i+1));
-
-        [a[i],a[j]]=[a[j],a[i];
+        [arr[i],arr[j]]=[arr[j],arr[i]];
     }
 }
 
@@ -193,10 +186,11 @@ function beep(freq){
 
     try{
 
-        const ctx=new(
-            window.AudioContext ||
-            window.webkitAudioContext
-        )();
+        const ctx=
+            new (
+                window.AudioContext ||
+                window.webkitAudioContext
+            )();
 
         const osc=ctx.createOscillator();
         const gain=ctx.createGain();
@@ -221,7 +215,6 @@ function beep(freq){
 function vib(){
 
     if(navigator.vibrate){
-
         navigator.vibrate(120);
     }
 }
@@ -231,7 +224,6 @@ function nextWord(){
     document.body.className="";
 
     if(words.length===0){
-
         end();
         return;
     }
@@ -245,10 +237,6 @@ function nextWord(){
 }
 
 function registerAnswer(type){
-
-    if(actionLock) return;
-
-    actionLock=true;
 
     if(type==="ok"){
 
@@ -264,20 +252,12 @@ function registerAnswer(type){
 
         document.body.className="bad";
 
-        beep(250);
+        beep(220);
     }
 
     vib();
 
-    setTimeout(()=>{
-
-        nextWord();
-
-        setTimeout(()=>{
-            actionLock=false;
-        },800);
-
-    },400);
+    setTimeout(nextWord,500);
 }
 
 function end(){
@@ -317,85 +297,103 @@ function startGame(){
         timerEl.textContent=time;
 
         if(time<=0){
-
             end();
         }
 
     },1000);
 }
 
-function enableMotionEngine(){
+function enableSensors(){
 
-    let lastTrigger=0;
+    let calibrated=false;
+
+    let neutral=0;
+    let axis="y";
+
+    let filteredX=0;
+    let filteredY=0;
+    let filteredZ=0;
+
+    let state="READY";
 
     window.addEventListener("devicemotion",e=>{
 
-        const now=Date.now();
+        const g=e.accelerationIncludingGravity;
 
-        if(now-lastTrigger<1300){
+        if(!g) return;
+
+        filteredX=filteredX*0.8+g.x*0.2;
+        filteredY=filteredY*0.8+g.y*0.2;
+        filteredZ=filteredZ*0.8+g.z*0.2;
+
+        if(!calibrated){
+
+            const axes=[
+                {name:"x",value:filteredX},
+                {name:"y",value:filteredY},
+                {name:"z",value:filteredZ}
+            ];
+
+            axes.sort((a,b)=>
+                Math.abs(b.value)-Math.abs(a.value)
+            );
+
+            axis=axes[0].name;
+            neutral=axes[0].value;
+
+            calibrated=true;
+
+            debug.textContent=
+                `Calibrado (${axis.toUpperCase()})`;
+
             return;
         }
 
-        let gyroSpeed=0;
+        let currentValue;
 
-        if(e.rotationRate){
+        if(axis==="x") currentValue=filteredX;
+        if(axis==="y") currentValue=filteredY;
+        if(axis==="z") currentValue=filteredZ;
 
-            const b=e.rotationRate.beta || 0;
-            const g=e.rotationRate.gamma || 0;
-
-            gyroSpeed=Math.abs(b)>Math.abs(g)
-                ? b
-                : g;
-
-            debug.textContent=
-                `gyro ${gyroSpeed.toFixed(1)}`;
-
-            if(gyroSpeed > 120){
-
-                lastTrigger=now;
-
-                registerAnswer("ok");
-
-                return;
-            }
-
-            if(gyroSpeed < -120){
-
-                lastTrigger=now;
-
-                registerAnswer("skip");
-
-                return;
-            }
-        }
-
-        const gravity=e.accelerationIncludingGravity;
-
-        if(!gravity) return;
-
-        const strongest=
-            Math.abs(gravity.x)>
-            Math.abs(gravity.y)
-                ? gravity.x
-                : gravity.y;
+        const delta=currentValue-neutral;
 
         debug.textContent=
-            `acc ${strongest.toFixed(1)}`;
+            `Axis:${axis} Δ:${delta.toFixed(2)} Estado:${state}`;
 
-        if(strongest>8){
+        if(state==="WAIT_CENTER"){
 
-            lastTrigger=now;
+            if(Math.abs(delta)<2){
+                state="READY";
+            }
+
+            return;
+        }
+
+        if(state!=="READY"){
+            return;
+        }
+
+        if(delta>5){
+
+            state="WAIT_CENTER";
 
             registerAnswer("ok");
 
-        }else if(strongest<-8){
+            return;
+        }
 
-            lastTrigger=now;
+        if(delta<-5){
+
+            state="WAIT_CENTER";
 
             registerAnswer("skip");
+
+            return;
         }
 
     });
+
+    startGame();
 }
 
 document.getElementById("start").onclick=async()=>{
@@ -415,17 +413,13 @@ document.getElementById("start").onclick=async()=>{
             }
         }
 
-        enableMotionEngine();
-
-        startGame();
+        enableSensors();
 
     }catch(err){
 
         console.error(err);
 
-        alert(
-            "Não foi possível acessar os sensores."
-        );
+        alert("Erro ao acessar sensores.");
     }
 };
 
