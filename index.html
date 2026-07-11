@@ -135,7 +135,7 @@
       l.innerHTML = `<input type="checkbox" value="${c}" checked> ${c}`;
       cats.appendChild(l);
     });
-    let words = [], idx = 0, time = 60, timer, res = [], ready = true;
+    let words = [], idx = 0, time = 60, timer, res = [], ready = true, started = false;
 
     function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { let j = Math.floor(Math.random() * (i + 1));[a[i], a[j]] = [a[j], a[i]]; } return a; }
     async function startGame() {
@@ -148,6 +148,7 @@
       words = shuffle(words);
       idx = 0; res = []; time = 60;
       show("game"); nextWord();
+      started = true;
       timer = setInterval(() => {
         document.getElementById("timer").textContent = --time;
         if (time <= 0) { clearInterval(timer); finish(); }
@@ -174,6 +175,7 @@
     function finish() {
       clearInterval(timer);
       show("end");
+      started = false;
       let ok = res.filter(r => r.ok).length;
       let skip = res.length - ok;
       document.getElementById("summary").textContent = `Acertos: ${ok} | Pulados: ${skip}`;
@@ -184,12 +186,14 @@
     }
     let neutral = true;
     window.addEventListener("deviceorientation", e => {
-      const ang = (screen.orientation && screen.orientation.type.startsWith("landscape")) ? e.gamma : e.beta;
-      if (ang == null) return;
-      if (Math.abs(ang) < 20) neutral = true;
-      if (!neutral) return;
-      if (ang > 55) { neutral = false; action(false); }
-      else if (ang < -55) { neutral = false; action(true); }
+      if (started) {
+        const ang = (screen.orientation && screen.orientation.type.startsWith("landscape")) ? e.gamma : e.beta;
+        if (ang == null) return;
+        if (Math.abs(ang) < 20) neutral = true;
+        if (!neutral) return;
+        if (ang > 55) { neutral = false; action(false); }
+        else if (ang < -55) { neutral = false; action(true); }
+      }
     });
   </script>
 </body>
