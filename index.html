@@ -1,354 +1,197 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Quem Sou Eu?</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Quem Sou Eu</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      height: 100%;
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #fff;
+      overflow: hidden
+    }
 
-<style>
-html,body{
-    margin:0;
-    height:100%;
-    font-family:Arial,sans-serif;
-    background:#111;
-    color:#fff;
-    overflow:hidden;
-}
+    .screen {
+      display: none;
+      height: 100%;
+      padding: 20px;
+      box-sizing: border-box
+    }
 
-.screen{
-    display:none;
-    height:100%;
-    padding:20px;
-    box-sizing:border-box;
-}
+    .active {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center
+    }
 
-.active{
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-}
+    h1 {
+      margin: 10px
+    }
 
-h1{margin:10px}
+    button {
+      padding: 14px 24px;
+      border: none;
+      border-radius: 12px;
+      background: #0a84ff;
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer
+    }
 
-button{
-    padding:14px 24px;
-    border:none;
-    border-radius:12px;
-    background:#0a84ff;
-    color:#fff;
-    font-size:18px;
-    cursor:pointer;
-}
+    label {
+      display: block;
+      margin: 8px;
+      font-size: 20px
+    }
 
-label{
-    display:block;
-    margin:8px;
-    font-size:20px;
-}
+    #timer {
+      position: absolute;
+      top: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 36px
+    }
 
-#timer{
-    position:absolute;
-    top:15px;
-    left:50%;
-    transform:translateX(-50%);
-    font-size:36px;
-}
+    #word {
+      font-size: min(12vw, 80px);
+      font-weight: bold;
+      text-align: center;
+      padding: 20px
+    }
 
-#word{
-    font-size:min(12vw,80px);
-    font-weight:bold;
-    text-align:center;
-    padding:20px;
-}
+    #status {
+      position: absolute;
+      bottom: 20px;
+      font-size: 22px;
+      opacity: .8
+    }
 
-#status{
-    position:absolute;
-    bottom:20px;
-    font-size:22px;
-    opacity:.8;
-}
+    .ok {
+      background: #1b5e20 !important
+    }
 
-.ok{
-    background:#1b5e20 !important;
-}
+    .skip {
+      background: #8b0000 !important
+    }
 
-.skip{
-    background:#8b0000 !important;
-}
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      max-width: 600px
+    }
 
-table{
-    border-collapse:collapse;
-    width:100%;
-    max-width:600px;
-}
-
-td,th{
-    border:1px solid #555;
-    padding:8px;
-}
-</style>
+    td,
+    th {
+      border: 1px solid #555;
+      padding: 8px
+    }
+  </style>
 </head>
 
 <body>
-
-<div id="menu" class="screen active">
+  <div id="menu" class="screen active">
     <h1>Quem Sou Eu?</h1>
-
     <div id="cats"></div>
-
     <button onclick="startGame()">Iniciar</button>
-</div>
+  </div>
 
-<div id="game" class="screen">
+  <div id="game" class="screen">
     <div id="timer">60</div>
-
     <div id="word"></div>
+    <div id="status">Incline para cima = Acertou | para baixo = Pulou</div>
+  </div>
 
-    <div id="status">
-        Incline para cima = Acertou | para baixo = Pulou
-    </div>
-</div>
-
-<div id="end" class="screen">
+  <div id="end" class="screen">
     <h1>Fim!</h1>
-
     <h2 id="summary"></h2>
-
     <table>
-        <thead>
-            <tr>
-                <th>Resultado</th>
-                <th>Item</th>
-            </tr>
-        </thead>
-        <tbody id="results"></tbody>
+      <thead>
+        <tr>
+          <th>Resultado</th>
+          <th>Item</th>
+        </tr>
+      </thead>
+      <tbody id="results"></tbody>
     </table>
+    <br><button onclick="location.reload()">Jogar novamente</button>
+  </div>
 
-    <br>
-
-    <button onclick="location.reload()">
-        Jogar novamente
-    </button>
-</div>
-
-<script>
-
-const DATABASE = {
-    animais:[
-        "Cachorro","Gato","Elefante","Leão","Tigre","Macaco",
-        "Girafa","Pinguim","Tubarão","Jacaré","Cobra","Urso"
-    ],
-    objetos:[
-        "Martelo","Geladeira","Computador","Celular","Mesa","Cadeira",
-        "Escova","Livro","Caneta","Relógio","Microfone","Lâmpada"
-    ],
-    paises:[
-        "Brasil","Japão","Canadá","Argentina","Portugal","China",
-        "Índia","Egito","Chile","México","Noruega","Austrália"
-    ],
-    profissoes:[
-        "Médico","Professor","Bombeiro","Policial","Programador",
-        "Arquiteto","Piloto","Dentista","Advogado","Engenheiro",
-        "Cozinheiro","Jornalista"
-    ]
-};
-
-const cats=document.getElementById("cats");
-
-Object.keys(DATABASE).forEach(c=>{
-    const l=document.createElement("label");
-    l.innerHTML=`<input type="checkbox" value="${c}" checked> ${c}`;
-    cats.appendChild(l);
-});
-
-let words=[];
-let idx=0;
-let time=60;
-let timer;
-let res=[];
-let ready=true;
-let neutral=true;
-let gameRunning=false;
-
-function shuffle(a){
-    for(let i=a.length-1;i>0;i--){
-        let j=Math.floor(Math.random()*(i+1));
-        [a[i],a[j]]=[a[j],a[i]];
-    }
-    return a;
-}
-
-function show(id){
-    document.querySelectorAll(".screen").forEach(s=>{
-        s.classList.remove("active");
+  <script>
+    const DATABASE = {
+      animais: ["Cachorro", "Gato", "Elefante", "Leão", "Tigre", "Macaco", "Girafa", "Pinguim", "Tubarão", "Jacaré", "Cobra", "Urso"],
+      objetos: ["Martelo", "Geladeira", "Computador", "Celular", "Mesa", "Cadeira", "Escova", "Livro", "Caneta", "Relógio", "Microfone", "Lâmpada"],
+      paises: ["Brasil", "Japão", "Canadá", "Argentina", "Portugal", "China", "Índia", "Egito", "Chile", "México", "Noruega", "Austrália"],
+      profissoes: ["Médico", "Professor", "Bombeiro", "Policial", "Programador", "Arquiteto", "Piloto", "Dentista", "Advogado", "Engenheiro", "Cozinheiro", "Jornalista"]
+    };
+    const cats = document.getElementById("cats");
+    Object.keys(DATABASE).forEach(c => {
+      const l = document.createElement("label");
+      l.innerHTML = `<input type="checkbox" value="${c}" checked> ${c}`;
+      cats.appendChild(l);
     });
+    let words = [], idx = 0, time = 60, timer, res = [], ready = true;
 
-    document.getElementById(id).classList.add("active");
-}
-
-async function startGame(){
-
-    if(DeviceOrientationEvent &&
-       DeviceOrientationEvent.requestPermission){
-
-        try{
-            await DeviceOrientationEvent.requestPermission();
-        }catch(e){}
+    function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { let j = Math.floor(Math.random() * (i + 1));[a[i], a[j]] = [a[j], a[i]]; } return a; }
+    async function startGame() {
+      if (DeviceOrientationEvent && DeviceOrientationEvent.requestPermission) {
+        try { await DeviceOrientationEvent.requestPermission(); } catch (e) { }
+      }
+      if (document.documentElement.requestFullscreen) { document.documentElement.requestFullscreen().catch(() => { }); }
+      words = [];
+      document.querySelectorAll("#cats input:checked").forEach(c => words.push(...DATABASE[c.value]));
+      words = shuffle(words);
+      idx = 0; res = []; time = 60;
+      show("game"); nextWord();
+      timer = setInterval(() => {
+        document.getElementById("timer").textContent = --time;
+        if (time <= 0) { clearInterval(timer); finish(); }
+      }, 1000);
     }
-
-    if(document.documentElement.requestFullscreen){
-        document.documentElement.requestFullscreen().catch(()=>{});
+    function show(id) {
+      document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+      document.getElementById(id).classList.add("active");
     }
-
-    words=[];
-
-    document.querySelectorAll("#cats input:checked")
-        .forEach(c=>{
-            words.push(...DATABASE[c.value]);
-        });
-
-    words=shuffle(words);
-
-    idx=0;
-    res=[];
-    time=60;
-    ready=true;
-    neutral=true;
-    gameRunning=true;
-
-    document.getElementById("timer").textContent=time;
-
-    show("game");
-
-    nextWord();
-
-    window.addEventListener(
-        "deviceorientation",
-        handleOrientation
-    );
-
-    timer=setInterval(()=>{
-        document.getElementById("timer").textContent=--time;
-
-        if(time<=0){
-            finish();
-        }
-    },1000);
-}
-
-function nextWord(){
-
-    if(idx>=words.length){
-        finish();
-        return;
+    function nextWord() {
+      if (idx >= words.length) { finish(); return; }
+      document.body.className = "";
+      document.getElementById("word").textContent = words[idx];
+      if (navigator.vibrate) navigator.vibrate(40);
     }
-
-    document.body.className="";
-
-    document.getElementById("word").textContent=words[idx];
-
-    if(navigator.vibrate){
-        navigator.vibrate(40);
+    function action(ok) {
+      if (!ready) return;
+      ready = false;
+      res.push({ word: words[idx], ok });
+      document.body.className = ok ? "ok" : "skip";
+      idx++;
+      setTimeout(() => { nextWord(); ready = true; }, 500);
     }
-}
-
-function action(ok){
-
-    if(!ready || !gameRunning){
-        return;
+    function finish() {
+      clearInterval(timer);
+      show("end");
+      let ok = res.filter(r => r.ok).length;
+      let skip = res.length - ok;
+      document.getElementById("summary").textContent = `Acertos: ${ok} | Pulados: ${skip}`;
+      let tb = document.getElementById("results"); tb.innerHTML = "";
+      res.forEach(r => {
+        tb.innerHTML += `<tr><td>${r.ok ? "✅" : "⏭"}</td><td>${r.word}</td></tr>`;
+      });
     }
-
-    ready=false;
-
-    res.push({
-        word:words[idx],
-        ok
+    let neutral = true;
+    window.addEventListener("deviceorientation", e => {
+      // const ang = (screen.orientation && screen.orientation.type.startsWith("landscape")) ? e.gamma : e.beta;
+      // if (ang == null) return;
+      // if (Math.abs(ang) < 20) neutral = true;
+      // if (!neutral) return;
+      // if (ang > 55) { neutral = false; action(true); }
+      // else if (ang < -55) { neutral = false; action(false); }
     });
-
-    document.body.className=ok ? "ok" : "skip";
-
-    idx++;
-
-    setTimeout(()=>{
-        nextWord();
-        ready=true;
-    },500);
-}
-
-function finish(){
-
-    if(!gameRunning){
-        return;
-    }
-
-    gameRunning=false;
-
-    clearInterval(timer);
-
-    window.removeEventListener(
-        "deviceorientation",
-        handleOrientation
-    );
-
-    show("end");
-
-    let ok=res.filter(r=>r.ok).length;
-    let skip=res.length-ok;
-
-    document.getElementById("summary").textContent=
-        `Acertos: ${ok} | Pulados: ${skip}`;
-
-    let tb=document.getElementById("results");
-    tb.innerHTML="";
-
-    res.forEach(r=>{
-        tb.innerHTML+=`
-            <tr>
-                <td>${r.ok ? "✅" : "⏭"}</td>
-                <td>${r.word}</td>
-            </tr>
-        `;
-    });
-}
-
-function handleOrientation(e){
-
-    if(!gameRunning){
-        return;
-    }
-
-    const ang=
-        (
-            screen.orientation &&
-            screen.orientation.type.startsWith("landscape")
-        )
-        ? e.gamma
-        : e.beta;
-
-    if(ang==null){
-        return;
-    }
-
-    if(Math.abs(ang)<20){
-        neutral=true;
-    }
-
-    if(!neutral){
-        return;
-    }
-
-    if(ang>55){
-        neutral=false;
-        action(true);
-    }
-    else if(ang<-55){
-        neutral=false;
-        action(false);
-    }
-}
-
-</script>
-
+  </script>
 </body>
+
 </html>
