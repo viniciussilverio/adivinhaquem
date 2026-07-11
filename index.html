@@ -191,11 +191,8 @@
 
       if (started && (screen.orientation && screen.orientation.type.startsWith("landscape"))) {
         const ang = (screen.orientation && screen.orientation.type.startsWith("landscape")) ? e.gamma : e.beta;
-        if (ang == null) return;
-        if (Math.abs(ang) < 20) neutral = true;
-        if (!neutral) return;
-        if (ang > 70) { neutral = false; action(false); }
-        else if (ang < -70) { neutral = false; action(true); }
+        if (ang < 80) { neutral = false; action(false); }
+        else if (ang < -80) { neutral = false; action(true); }
       }
     });
   </script>
