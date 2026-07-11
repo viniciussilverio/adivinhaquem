@@ -195,7 +195,7 @@
         if (Math.abs(ang) < 20) neutral = true;
         if (!neutral) return;
         if (ang > 30) { neutral = false; action(false); }
-        else if (ang < -30) { neutral = false; action(true); }
+        else if (ang < -10) { neutral = false; action(true); }
       }
     });
   </script>
