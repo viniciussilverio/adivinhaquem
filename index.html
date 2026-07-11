@@ -2,15 +2,15 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Quem Sou Eu?</title>
 
 <style>
 body{
     margin:0;
-    font-family:Arial,sans-serif;
     background:#111;
-    color:#fff;
+    color:white;
+    font-family:Arial,sans-serif;
     display:flex;
     justify-content:center;
     align-items:center;
@@ -27,39 +27,34 @@ body{
 
 button,select{
     font-size:18px;
-    padding:12px 18px;
+    padding:12px 16px;
     border:none;
     border-radius:8px;
-}
-
-#word{
-    font-size:64px;
-    font-weight:bold;
-    margin:25px 0;
 }
 
 .hidden{
     display:none;
 }
 
-.good{
-    background:#1f8b4c;
+#word{
+    font-size:64px;
+    font-weight:bold;
+    margin:20px 0;
 }
 
-.bad{
-    background:#8b1f1f;
+.good{background:#188847;}
+.bad{background:#9b2222;}
+
+#timer{
+    font-size:30px;
 }
 
 .small{
     opacity:.8;
 }
 
-#timer{
-    font-size:30px;
-}
-
 #debug{
-    margin-top:12px;
+    margin-top:10px;
     font-size:13px;
     opacity:.7;
 }
@@ -73,8 +68,7 @@ button,select{
         <h1>Quem Sou Eu?</h1>
 
         <p>
-            Incline para frente = Acertou
-            <br>
+            Incline para frente = Acertou<br>
             Incline para trás = Passou
         </p>
 
@@ -82,9 +76,13 @@ button,select{
 
         <br><br>
 
-        <button id="start">
-            Jogar
-        </button>
+        <button id="start">Jogar</button>
+    </div>
+
+    <div id="calibration" class="hidden">
+        <h2>Calibrando...</h2>
+        <p>Mantenha o celular na posição de jogo.</p>
+        <div id="countdown">2</div>
     </div>
 
     <div id="game" class="hidden">
@@ -95,7 +93,7 @@ button,select{
             Frente = Acertou | Trás = Passou
         </div>
 
-        <div id="word">...</div>
+        <div id="word"></div>
 
         <div id="score"></div>
 
@@ -149,35 +147,51 @@ const db = {
     ]
 };
 
-const sel=document.getElementById("cat");
+const sel = document.getElementById("cat");
 
-Object.keys(db).forEach(c=>{
-    sel.add(new Option(c,c));
+Object.keys(db).forEach(cat=>{
+    sel.add(new Option(cat,cat));
 });
 
-const menu=document.getElementById("menu");
-const game=document.getElementById("game");
-const endDiv=document.getElementById("end");
+const menu = document.getElementById("menu");
+const calibration = document.getElementById("calibration");
+const game = document.getElementById("game");
+const endDiv = document.getElementById("end");
 
-const word=document.getElementById("word");
-const score=document.getElementById("score");
-const timerEl=document.getElementById("timer");
-const result=document.getElementById("result");
-const lists=document.getElementById("lists");
-const debug=document.getElementById("debug");
+const wordEl = document.getElementById("word");
+const timerEl = document.getElementById("timer");
+const scoreEl = document.getElementById("score");
+const debugEl = document.getElementById("debug");
+const resultEl = document.getElementById("result");
+const listsEl = document.getElementById("lists");
+const countdownEl = document.getElementById("countdown");
 
-let words=[];
-let current="";
+let words = [];
+let currentWord = "";
 
-let ok=[];
-let skip=[];
+let ok = [];
+let skip = [];
 
 let timer;
-let time=60;
+let time = 60;
+
+let sensorStarted = false;
+
+let neutral = 0;
+let activeAxis = "y";
+
+let filteredX = 0;
+let filteredY = 0;
+let filteredZ = 0;
+
+let state = "READY";
 
 function shuffle(arr){
+
     for(let i=arr.length-1;i>0;i--){
+
         const j=Math.floor(Math.random()*(i+1));
+
         [arr[i],arr[j]]=[arr[j],arr[i]];
     }
 }
@@ -186,16 +200,14 @@ function beep(freq){
 
     try{
 
-        const ctx=
-            new (
-                window.AudioContext ||
-                window.webkitAudioContext
-            )();
+        const ctx =
+            new (window.AudioContext ||
+                 window.webkitAudioContext)();
 
-        const osc=ctx.createOscillator();
-        const gain=ctx.createGain();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
 
-        osc.frequency.value=freq;
+        osc.frequency.value = freq;
 
         osc.connect(gain);
         gain.connect(ctx.destination);
@@ -204,43 +216,47 @@ function beep(freq){
 
         gain.gain.exponentialRampToValueAtTime(
             0.0001,
-            ctx.currentTime+0.15
+            ctx.currentTime + 0.15
         );
 
-        osc.stop(ctx.currentTime+0.15);
+        osc.stop(ctx.currentTime + 0.15);
 
     }catch(e){}
 }
 
-function vib(){
+function vibrate(){
 
     if(navigator.vibrate){
-        navigator.vibrate(120);
+        navigator.vibrate(100);
     }
 }
 
 function nextWord(){
 
-    document.body.className="";
+    document.body.className = "";
 
     if(words.length===0){
-        end();
+        endGame();
         return;
     }
 
-    current=words.pop();
+    currentWord = words.pop();
 
-    word.textContent=current;
+    wordEl.textContent = currentWord;
 
-    score.textContent=
+    scoreEl.textContent =
         `Acertos: ${ok.length} | Passou: ${skip.length}`;
 }
 
 function registerAnswer(type){
 
+    if(state !== "READY") return;
+
+    state = "WAIT_CENTER";
+
     if(type==="ok"){
 
-        ok.push(current);
+        ok.push(currentWord);
 
         document.body.className="good";
 
@@ -248,29 +264,29 @@ function registerAnswer(type){
 
     }else{
 
-        skip.push(current);
+        skip.push(currentWord);
 
         document.body.className="bad";
 
         beep(220);
     }
 
-    vib();
+    vibrate();
 
-    setTimeout(nextWord,500);
+    setTimeout(nextWord,400);
 }
 
-function end(){
+function endGame(){
 
     clearInterval(timer);
 
     game.classList.add("hidden");
     endDiv.classList.remove("hidden");
 
-    result.textContent=
+    resultEl.textContent =
         `Acertos: ${ok.length} | Passou: ${skip.length}`;
 
-    lists.innerHTML=`
+    listsEl.innerHTML = `
         <h3>Acertou</h3>
         <p>${ok.join(", ")}</p>
 
@@ -281,139 +297,174 @@ function end(){
 
 function startGame(){
 
-    menu.classList.add("hidden");
+    calibration.classList.add("hidden");
     game.classList.remove("hidden");
 
-    words=[...db[sel.value]];
+    words = [...db[sel.value]];
 
     shuffle(words);
 
     nextWord();
 
-    timer=setInterval(()=>{
+    timer = setInterval(()=>{
 
         time--;
 
-        timerEl.textContent=time;
+        timerEl.textContent = time;
 
         if(time<=0){
-            end();
+            endGame();
         }
 
     },1000);
 }
 
-function enableSensors(){
+function setupSensors(){
 
-    let calibrated=false;
+    if(sensorStarted) return;
 
-    let neutral=0;
-    let axis="y";
+    sensorStarted = true;
 
-    let filteredX=0;
-    let filteredY=0;
-    let filteredZ=0;
+    window.addEventListener("devicemotion", e => {
 
-    let state="READY";
-
-    window.addEventListener("devicemotion",e=>{
-
-        const g=e.accelerationIncludingGravity;
+        const g = e.accelerationIncludingGravity;
 
         if(!g) return;
 
-        filteredX=filteredX*0.8+g.x*0.2;
-        filteredY=filteredY*0.8+g.y*0.2;
-        filteredZ=filteredZ*0.8+g.z*0.2;
+        filteredX = filteredX*0.85 + g.x*0.15;
+        filteredY = filteredY*0.85 + g.y*0.15;
+        filteredZ = filteredZ*0.85 + g.z*0.15;
 
-        if(!calibrated){
+        let current;
 
-            const axes=[
-                {name:"x",value:filteredX},
-                {name:"y",value:filteredY},
-                {name:"z",value:filteredZ}
-            ];
+        if(activeAxis==="x") current = filteredX;
+        if(activeAxis==="y") current = filteredY;
+        if(activeAxis==="z") current = filteredZ;
 
-            axes.sort((a,b)=>
-                Math.abs(b.value)-Math.abs(a.value)
-            );
+        const delta = current - neutral;
 
-            axis=axes[0].name;
-            neutral=axes[0].value;
-
-            calibrated=true;
-
-            debug.textContent=
-                `Calibrado (${axis.toUpperCase()})`;
-
-            return;
-        }
-
-        let currentValue;
-
-        if(axis==="x") currentValue=filteredX;
-        if(axis==="y") currentValue=filteredY;
-        if(axis==="z") currentValue=filteredZ;
-
-        const delta=currentValue-neutral;
-
-        debug.textContent=
-            `Axis:${axis} Δ:${delta.toFixed(2)} Estado:${state}`;
+        debugEl.textContent =
+            `Axis:${activeAxis.toUpperCase()} Δ:${delta.toFixed(2)} State:${state}`;
 
         if(state==="WAIT_CENTER"){
 
-            if(Math.abs(delta)<2){
-                state="READY";
+            if(Math.abs(delta) < 2){
+                state = "READY";
             }
 
             return;
         }
 
-        if(state!=="READY"){
-            return;
-        }
-
-        if(delta>5){
-
-            state="WAIT_CENTER";
+        if(delta > 4.5){
 
             registerAnswer("ok");
-
             return;
         }
 
-        if(delta<-5){
-
-            state="WAIT_CENTER";
+        if(delta < -4.5){
 
             registerAnswer("skip");
-
             return;
         }
 
     });
 
-    startGame();
 }
 
-document.getElementById("start").onclick=async()=>{
+async function beginCalibration(){
+
+    menu.classList.add("hidden");
+    calibration.classList.remove("hidden");
+
+    let samples = [];
+
+    const collect = e => {
+
+        const g = e.accelerationIncludingGravity;
+
+        if(!g) return;
+
+        samples.push({
+            x:g.x,
+            y:g.y,
+            z:g.z
+        });
+    };
+
+    window.addEventListener(
+        "devicemotion",
+        collect
+    );
+
+    let count = 2;
+
+    countdownEl.textContent = count;
+
+    const countdownTimer = setInterval(()=>{
+
+        count--;
+
+        countdownEl.textContent = count;
+
+    },1000);
+
+    setTimeout(()=>{
+
+        clearInterval(countdownTimer);
+
+        window.removeEventListener(
+            "devicemotion",
+            collect
+        );
+
+        let avgX=0;
+        let avgY=0;
+        let avgZ=0;
+
+        samples.forEach(s=>{
+            avgX+=s.x;
+            avgY+=s.y;
+            avgZ+=s.z;
+        });
+
+        avgX/=samples.length;
+        avgY/=samples.length;
+        avgZ/=samples.length;
+
+        const axes = [
+            {name:"x",value:avgX},
+            {name:"y",value:avgY},
+            {name:"z",value:avgZ}
+        ];
+
+        axes.sort((a,b)=>
+            Math.abs(b.value)-Math.abs(a.value)
+        );
+
+        activeAxis = axes[0].name;
+        neutral = axes[0].value;
+
+        setupSensors();
+        startGame();
+
+    },2000);
+}
+
+document.getElementById("start").onclick = async ()=>{
 
     try{
 
         if(
-            typeof DeviceMotionEvent!=="undefined" &&
-            typeof DeviceMotionEvent.requestPermission==="function"
+            typeof DeviceMotionEvent !== "undefined" &&
+            typeof DeviceMotionEvent.requestPermission === "function"
         ){
-
-            const permission=
+            const p =
                 await DeviceMotionEvent.requestPermission();
 
-            if(permission!=="granted"){
-                return;
-            }
+            if(p!=="granted") return;
         }
 
-        enableSensors();
+        beginCalibration();
 
     }catch(err){
 
@@ -421,6 +472,7 @@ document.getElementById("start").onclick=async()=>{
 
         alert("Erro ao acessar sensores.");
     }
+
 };
 
 </script>
