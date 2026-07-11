@@ -185,16 +185,6 @@
       });
     }
     let neutral = true;
-    window.addEventListener("deviceorientation", e => {
-      if (started) {
-        const ang = (screen.orientation && screen.orientation.type.startsWith("landscape")) ? e.gamma : e.beta;
-        if (ang == null) return;
-        if (Math.abs(ang) < 20) neutral = true;
-        if (!neutral) return;
-        if (ang > 55) { neutral = false; action(false); }
-        else if (ang < -55) { neutral = false; action(true); }
-      }
-    });
   </script>
 </body>
 
