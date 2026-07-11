@@ -104,7 +104,8 @@
   <div id="game" class="screen">
     <div id="timer">60</div>
     <div id="word"></div>
-    <div id="status">Incline para cima = Acertou | para baixo = Pulou</div>
+    <div id="status"></div>
+    <!-- <div id="status">Incline para cima = Acertou | para baixo = Pulou</div> -->
   </div>
 
   <div id="end" class="screen">
@@ -186,7 +187,9 @@
     }
     let neutral = true;
     window.addEventListener("deviceorientation", e => {
+
       if (started) {
+        document.getElementById("status").textContent = ang;
         const ang = (screen.orientation && screen.orientation.type.startsWith("landscape")) ? e.gamma : e.beta;
         if (ang == null) return;
         if (Math.abs(ang) < 20) neutral = true;
