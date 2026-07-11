@@ -8,61 +8,60 @@
 <style>
 body{
     margin:0;
-    font-family:Arial,sans-serif;
     background:#111;
     color:#fff;
+    font-family:Arial,sans-serif;
     display:flex;
     justify-content:center;
     align-items:center;
     height:100vh;
     text-align:center;
-    transition:.2s;
+    transition:.25s;
 }
 
 #app{
     width:100%;
-    max-width:700px;
+    max-width:800px;
     padding:20px;
 }
 
 button,select{
     font-size:18px;
-    padding:10px 16px;
-    border-radius:8px;
+    padding:12px 18px;
     border:none;
+    border-radius:10px;
 }
 
 #word{
     font-size:64px;
     font-weight:bold;
-    margin:20px;
-}
-
-.small{
-    opacity:.8;
-}
-
-.good{
-    background:#1f8b4c;
-}
-
-.bad{
-    background:#8b1f1f;
+    margin:25px 0;
 }
 
 .hidden{
     display:none;
 }
 
+.good{
+    background:#178848;
+}
+
+.bad{
+    background:#982222;
+}
+
 #timer{
-    font-size:28px;
+    font-size:32px;
+}
+
+.small{
+    opacity:.8;
 }
 
 #debug{
     margin-top:10px;
-    font-size:14px;
-    opacity:.7;
-    word-break:break-word;
+    opacity:.6;
+    font-size:13px;
 }
 </style>
 </head>
@@ -71,10 +70,13 @@ button,select{
 <div id="app">
 
     <div id="menu">
+
         <h1>Quem Sou Eu?</h1>
 
         <p>
-            Escolha uma categoria e coloque o celular na testa.
+            Incline rapidamente para frente = Acertou
+            <br>
+            Incline rapidamente para trás = Passou
         </p>
 
         <select id="cat"></select>
@@ -84,6 +86,7 @@ button,select{
         <button id="start">
             Jogar
         </button>
+
     </div>
 
     <div id="game" class="hidden">
@@ -91,7 +94,7 @@ button,select{
         <div id="timer">60</div>
 
         <div class="small">
-            Baixar = Acertou | Levantar = Passou
+            Frente = Acertou | Trás = Passou
         </div>
 
         <div id="word">...</div>
@@ -124,36 +127,29 @@ button,select{
 
 const db = {
 
-    "Animais":[
+    Animais:[
         "Leão","Elefante","Cachorro","Gato","Girafa",
         "Zebra","Pinguim","Tubarão","Baleia","Macaco"
     ],
 
-    "Filmes":[
+    Filmes:[
         "Titanic","Avatar","Matrix","Interestelar",
-        "Gladiador","Shrek","Toy Story",
-        "Frozen","Batman","Superman"
+        "Gladiador","Shrek","Toy Story","Frozen",
+        "Batman","Superman"
     ],
 
-    "Objetos":[
+    Objetos:[
         "Computador","Celular","Cadeira","Caneta",
         "Livro","Martelo","Relógio","Violão",
         "Microfone","Guarda-chuva"
     ],
 
-    "Comidas":[
+    Comidas:[
         "Pizza","Sushi","Hambúrguer","Feijoada",
         "Lasanha","Sorvete","Chocolate",
         "Pipoca","Pastel","Maçã"
     ]
-
 };
-
-const sel = document.getElementById("cat");
-
-Object.keys(db).forEach(c=>{
-    sel.add(new Option(c,c));
-});
 
 const menu = document.getElementById("menu");
 const game = document.getElementById("game");
@@ -161,85 +157,104 @@ const endDiv = document.getElementById("end");
 
 const word = document.getElementById("word");
 const score = document.getElementById("score");
+const timerEl = document.getElementById("timer");
 const result = document.getElementById("result");
 const lists = document.getElementById("lists");
-const timerEl = document.getElementById("timer");
 const debug = document.getElementById("debug");
 
-let words = [];
-let current = "";
+const sel = document.getElementById("cat");
 
-let ok = [];
-let skip = [];
+Object.keys(db).forEach(c=>{
+    sel.add(new Option(c,c));
+});
 
-let lock = false;
+let words=[];
+let current="";
+
+let ok=[];
+let skip=[];
+
 let timer;
-let time = 60;
+let time=60;
+
+let actionLock=false;
 
 function shuffle(a){
+
     for(let i=a.length-1;i>0;i--){
+
         const j=Math.floor(Math.random()*(i+1));
-        [a[i],a[j]]=[a[j],a[i]];
+
+        [a[i],a[j]]=[a[j],a[i];
     }
 }
 
 function beep(freq){
 
-    const ctx =
-        new (window.AudioContext || window.webkitAudioContext)();
+    try{
 
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
+        const ctx=new(
+            window.AudioContext ||
+            window.webkitAudioContext
+        )();
 
-    osc.frequency.value = freq;
+        const osc=ctx.createOscillator();
+        const gain=ctx.createGain();
 
-    osc.connect(gain);
-    gain.connect(ctx.destination);
+        osc.frequency.value=freq;
 
-    osc.start();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
 
-    gain.gain.exponentialRampToValueAtTime(
-        0.0001,
-        ctx.currentTime + 0.15
-    );
+        osc.start();
 
-    osc.stop(ctx.currentTime + 0.15);
+        gain.gain.exponentialRampToValueAtTime(
+            0.0001,
+            ctx.currentTime+0.15
+        );
+
+        osc.stop(ctx.currentTime+0.15);
+
+    }catch(e){}
 }
 
 function vib(){
+
     if(navigator.vibrate){
+
         navigator.vibrate(120);
     }
 }
 
 function nextWord(){
 
-    document.body.className = "";
+    document.body.className="";
 
-    if(words.length === 0){
+    if(words.length===0){
+
         end();
         return;
     }
 
-    current = words.pop();
+    current=words.pop();
 
-    word.textContent = current;
+    word.textContent=current;
 
-    score.textContent =
+    score.textContent=
         `Acertos: ${ok.length} | Passou: ${skip.length}`;
 }
 
-function action(type){
+function registerAnswer(type){
 
-    if(lock) return;
+    if(actionLock) return;
 
-    lock = true;
+    actionLock=true;
 
-    if(type === "ok"){
+    if(type==="ok"){
 
         ok.push(current);
 
-        document.body.className = "good";
+        document.body.className="good";
 
         beep(900);
 
@@ -247,7 +262,7 @@ function action(type){
 
         skip.push(current);
 
-        document.body.className = "bad";
+        document.body.className="bad";
 
         beep(250);
     }
@@ -255,9 +270,14 @@ function action(type){
     vib();
 
     setTimeout(()=>{
+
         nextWord();
-        lock = false;
-    },500);
+
+        setTimeout(()=>{
+            actionLock=false;
+        },800);
+
+    },400);
 }
 
 function end(){
@@ -267,10 +287,10 @@ function end(){
     game.classList.add("hidden");
     endDiv.classList.remove("hidden");
 
-    result.textContent =
+    result.textContent=
         `Acertos: ${ok.length} | Passou: ${skip.length}`;
 
-    lists.innerHTML = `
+    lists.innerHTML=`
         <h3>Acertou</h3>
         <p>${ok.join(", ")}</p>
 
@@ -284,133 +304,132 @@ function startGame(){
     menu.classList.add("hidden");
     game.classList.remove("hidden");
 
-    words = [...db[sel.value]];
+    words=[...db[sel.value]];
 
     shuffle(words);
 
     nextWord();
 
-    timer = setInterval(()=>{
+    timer=setInterval(()=>{
 
         time--;
 
-        timerEl.textContent = time;
+        timerEl.textContent=time;
 
-        if(time <= 0){
+        if(time<=0){
+
             end();
         }
 
     },1000);
 }
 
-function initSensors(){
+function enableMotionEngine(){
 
-    let neutral = null;
+    let lastTrigger=0;
 
-    let filtered = 0;
+    window.addEventListener("devicemotion",e=>{
 
-    let state = "neutral";
+        const now=Date.now();
 
-    window.addEventListener("devicemotion", e => {
-
-        const g = e.accelerationIncludingGravity;
-
-        if(!g) return;
-
-        let value;
-
-        const landscape =
-            window.innerWidth > window.innerHeight;
-
-        if(landscape){
-
-            value = g.x;
-
-        }else{
-
-            value = g.y;
-        }
-
-        filtered = filtered * 0.85 + value * 0.15;
-
-        if(neutral === null){
-
-            neutral = filtered;
-
-            debug.textContent =
-                "Calibrado ✓";
-
+        if(now-lastTrigger<1300){
             return;
         }
 
-        const delta = filtered - neutral;
+        let gyroSpeed=0;
 
-        debug.textContent =
-            `Δ ${delta.toFixed(1)} | ${landscape ? "LANDSCAPE" : "PORTRAIT"} | ${state}`;
+        if(e.rotationRate){
 
-        if(state === "triggered"){
+            const b=e.rotationRate.beta || 0;
+            const g=e.rotationRate.gamma || 0;
 
-            if(Math.abs(delta) < 2.5){
-                state = "neutral";
+            gyroSpeed=Math.abs(b)>Math.abs(g)
+                ? b
+                : g;
+
+            debug.textContent=
+                `gyro ${gyroSpeed.toFixed(1)}`;
+
+            if(gyroSpeed > 120){
+
+                lastTrigger=now;
+
+                registerAnswer("ok");
+
+                return;
             }
 
-            return;
-        }
+            if(gyroSpeed < -120){
 
-        // abaixo da posição normal = acertou
-        if(delta > 5){
+                lastTrigger=now;
 
-            state = "triggered";
+                registerAnswer("skip");
 
-            action("ok");
-
-            return;
-        }
-
-        // acima da posição normal = passou
-        if(delta < -5){
-
-            state = "triggered";
-
-            action("skip");
-
-            return;
-        }
-
-    });
-
-    startGame();
-}
-
-document.getElementById("start").onclick = async () => {
-
-    try{
-
-        if(
-            typeof DeviceMotionEvent !== "undefined" &&
-            typeof DeviceMotionEvent.requestPermission === "function"
-        ){
-
-            const permission =
-                await DeviceMotionEvent.requestPermission();
-
-            if(permission !== "granted"){
                 return;
             }
         }
 
-        initSensors();
+        const gravity=e.accelerationIncludingGravity;
+
+        if(!gravity) return;
+
+        const strongest=
+            Math.abs(gravity.x)>
+            Math.abs(gravity.y)
+                ? gravity.x
+                : gravity.y;
+
+        debug.textContent=
+            `acc ${strongest.toFixed(1)}`;
+
+        if(strongest>8){
+
+            lastTrigger=now;
+
+            registerAnswer("ok");
+
+        }else if(strongest<-8){
+
+            lastTrigger=now;
+
+            registerAnswer("skip");
+        }
+
+    });
+}
+
+document.getElementById("start").onclick=async()=>{
+
+    try{
+
+        if(
+            typeof DeviceMotionEvent!=="undefined" &&
+            typeof DeviceMotionEvent.requestPermission==="function"
+        ){
+
+            const permission=
+                await DeviceMotionEvent.requestPermission();
+
+            if(permission!=="granted"){
+                return;
+            }
+        }
+
+        enableMotionEngine();
+
+        startGame();
 
     }catch(err){
+
+        console.error(err);
 
         alert(
             "Não foi possível acessar os sensores."
         );
-
-        console.error(err);
     }
 };
 
 </script>
+
 </body>
 </html>
