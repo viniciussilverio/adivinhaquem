@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Quem Sou Eu?</title>
 <style>
-body{margin:0;font-family:Arial,sans-serif;background:#111;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;text-align:center}
+body{margin:0;font-family:Arial,sans-serif;background:#111;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;text-align:center;transition:.2s}
 #app{width:100%;max-width:700px;padding:20px}
 button,select{font-size:18px;padding:10px 16px;border-radius:8px;border:none}
 #word{font-size:64px;font-weight:bold;margin:20px}
@@ -13,6 +13,7 @@ button,select{font-size:18px;padding:10px 16px;border-radius:8px;border:none}
 .good{background:#1f8b4c}.bad{background:#8b1f1f}
 .hidden{display:none}
 #timer{font-size:28px}
+#debug{margin-top:15px;font-size:14px;opacity:.7}
 </style>
 </head>
 <body>
@@ -26,9 +27,10 @@ button,select{font-size:18px;padding:10px 16px;border-radius:8px;border:none}
 
 <div id="game" class="hidden">
 <div id="timer">60</div>
-<div class="small">Incline para frente = Acertou • Para trás = Passou</div>
+<div class="small">Frente = Acertou | Trás = Passou</div>
 <div id="word">...</div>
 <div id="score"></div>
+<div id="debug"></div>
 </div>
 
 <div id="end" class="hidden">
@@ -46,51 +48,66 @@ const db={
 "Objetos":["Computador","Celular","Cadeira","Caneta","Livro","Martelo","Relógio","Violão","Microfone","Guarda-chuva"],
 "Comidas":["Pizza","Sushi","Hambúrguer","Feijoada","Lasanha","Sorvete","Chocolate","Pipoca","Pastel","Maçã"]
 };
+
 const sel=document.getElementById("cat");
-Object.keys(db).forEach(c=>{let o=document.createElement("option");o.text=o.value=c;sel.add(o);});
+Object.keys(db).forEach(c=>sel.add(new Option(c,c)));
+
 let words=[],current="",ok=[],skip=[],lock=false,time=60,timer;
 
 function shuffle(a){for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}}
-function beep(f){let c=new(window.AudioContext||window.webkitAudioContext)();let o=c.createOscillator(),g=c.createGain();o.frequency.value=f;o.connect(g);g.connect(c.destination);o.start();g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+.15);o.stop(c.currentTime+.15);}
-function vib(){if(navigator.vibrate)navigator.vibrate(120);}
-function nextWord(){
- document.body.className="";
- if(!words.length){end();return;}
- current=words.pop();
- word.textContent=current;
- score.textContent=`Acertos: ${ok.length} | Passou: ${skip.length}`;
-}
-function action(type){
- if(lock)return;
- lock=true;
- if(type==="ok"){ok.push(current);document.body.className="good";beep(880);}
- else{skip.push(current);document.body.className="bad";beep(220);}
- vib();
- setTimeout(()=>{nextWord();lock=false;},500);
-}
-function end(){
- clearInterval(timer);
- game.classList.add("hidden");
- endDiv.classList.remove("hidden");
- result.textContent=`Acertos: ${ok.length} | Passou: ${skip.length}`;
- lists.innerHTML="<h3>Acertou</h3><p>"+ok.join(", ")+"</p><h3>Passou</h3><p>"+skip.join(", ")+"</p>";
-}
+function beep(f){const c=new(window.AudioContext||window.webkitAudioContext)();const o=c.createOscillator();const g=c.createGain();o.frequency.value=f;o.connect(g);g.connect(c.destination);o.start();g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+.15);o.stop(c.currentTime+.15);}
+function vib(){navigator.vibrate&&navigator.vibrate(120);}
+function nextWord(){document.body.className="";if(!words.length){end();return;}current=words.pop();word.textContent=current;score.textContent=`Acertos: ${ok.length} | Passou: ${skip.length}`;}
+function action(t){if(lock)return;lock=true;if(t==="ok"){ok.push(current);document.body.className="good";beep(880);}else{skip.push(current);document.body.className="bad";beep(220);}vib();setTimeout(()=>{nextWord();lock=false;},500);}
+function end(){clearInterval(timer);game.classList.add("hidden");endDiv.classList.remove("hidden");result.textContent=`Acertos: ${ok.length} | Passou: ${skip.length}`;lists.innerHTML=`<h3>Acertou</h3><p>${ok.join(", ")}</p><h3>Passou</h3><p>${skip.join(", ")}</p>`;}
+
 const menu=document.getElementById("menu"),game=document.getElementById("game"),endDiv=document.getElementById("end");
-const word=document.getElementById("word"),score=document.getElementById("score"),result=document.getElementById("result"),lists=document.getElementById("lists"),timerEl=document.getElementById("timer");
+const word=document.getElementById("word"),score=document.getElementById("score"),result=document.getElementById("result"),lists=document.getElementById("lists"),timerEl=document.getElementById("timer"),debug=document.getElementById("debug");
 
 function startGame(){
- menu.classList.add("hidden");game.classList.remove("hidden");
- words=[...db[sel.value]];shuffle(words);nextWord();
+ menu.classList.add("hidden");
+ game.classList.remove("hidden");
+ words=[...db[sel.value]];
+ shuffle(words);
+ nextWord();
  timer=setInterval(()=>{time--;timerEl.textContent=time;if(time<=0)end();},1000);
 }
+
 function initSensors(){
+ let base=null;
+ let lastAction=0;
+
  window.addEventListener("deviceorientation",e=>{
-   const b=e.beta;
-   if(b>55)action("ok");
-   else if(b<-55)action("skip");
+    if(e.beta==null||e.gamma==null)return;
+
+    const angle=Math.abs(e.gamma)>Math.abs(e.beta)?e.gamma:e.beta;
+
+    if(base===null){
+        base=angle;
+        debug.textContent="Calibrado";
+        return;
+    }
+
+    const delta=angle-base;
+
+    debug.textContent=`beta:${e.beta.toFixed(1)} gamma:${e.gamma.toFixed(1)} eixo:${angle.toFixed(1)} Δ:${delta.toFixed(1)}`;
+
+    if(Date.now()-lastAction<1200)return;
+
+    if(delta>35){
+        lastAction=Date.now();
+        action("ok");
+        setTimeout(()=>base=angle,700);
+    }else if(delta<-35){
+        lastAction=Date.now();
+        action("skip");
+        setTimeout(()=>base=angle,700);
+    }
  });
+
  startGame();
 }
+
 document.getElementById("start").onclick=()=>{
  if(typeof DeviceOrientationEvent!=="undefined"&&typeof DeviceOrientationEvent.requestPermission==="function"){
    DeviceOrientationEvent.requestPermission().then(r=>{if(r==="granted")initSensors();});
