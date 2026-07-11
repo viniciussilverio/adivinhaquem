@@ -194,8 +194,8 @@
         if (ang == null) return;
         if (Math.abs(ang) < 20) neutral = true;
         if (!neutral) return;
-        if (ang > 55) { neutral = false; action(false); }
-        else if (ang < -55) { neutral = false; action(true); }
+        if (ang > 40) { neutral = false; action(false); }
+        else if (ang < -40) { neutral = false; action(true); }
       }
     });
   </script>
