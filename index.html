@@ -22,23 +22,33 @@ td,th{border:1px solid #555;padding:8px}
 <body>
 <div id="menu" class="screen active">
 <h1>Quem Sou Eu?</h1>
-<div id="cats"></div>
+<div id="cats">
+</div>
 <button onclick="startGame()">Iniciar</button>
 </div>
-
 <div id="game" class="screen">
 <div id="timer">60</div>
-<div id="word"></div>
+<div id="word">
+</div>
 <div id="status">Incline para cima = Acertou | para baixo = Pulou</div>
 </div>
-
 <div id="end" class="screen">
 <h1>Fim!</h1>
-<h2 id="summary"></h2>
-<table><thead><tr><th>Resultado</th><th>Item</th></tr></thead><tbody id="results"></tbody></table>
-<br><button onclick="location.reload()">Jogar novamente</button>
+<h2 id="summary">
+</h2>
+<table>
+<thead>
+<tr>
+<th>Resultado</th>
+<th>Item</th>
+</tr>
+</thead>
+<tbody id="results">
+</tbody>
+</table>
+<br>
+<button onclick="location.reload()">Jogar novamente</button>
 </div>
-
 <script>
 const DATABASE={
 animais:["Cachorro","Gato","Elefante","Leão","Tigre","Macaco","Girafa","Pinguim","Tubarão","Jacaré","Cobra","Urso"],
@@ -52,7 +62,7 @@ Object.keys(DATABASE).forEach(c=>{
  l.innerHTML=`<input type="checkbox" value="${c}" checked> ${c}`;
  cats.appendChild(l);
 });
-let words=[],idx=0,time=60,timer,res=[],ready=true;
+let words=[],idx=0,time=60,timer,res=[],ready=true,gameStarted=false;
 
 function shuffle(a){for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 async function startGame(){
@@ -63,7 +73,7 @@ async function startGame(){
  words=[];
  document.querySelectorAll("#cats input:checked").forEach(c=>words.push(...DATABASE[c.value]));
  words=shuffle(words);
- idx=0;res=[];time=60;
+ idx=0;res=[];time=60;ready=true;gameStarted=true;
  show("game");nextWord();
  timer=setInterval(()=>{
    document.getElementById("timer").textContent=--time;
@@ -81,7 +91,7 @@ function nextWord(){
  if(navigator.vibrate)navigator.vibrate(40);
 }
 function action(ok){
- if(!ready)return;
+ if(!gameStarted||!ready)return;
  ready=false;
  res.push({word:words[idx],ok});
  document.body.className=ok?"ok":"skip";
@@ -90,17 +100,22 @@ function action(ok){
 }
 function finish(){
  clearInterval(timer);
+ gameStarted=false;
  show("end");
  let ok=res.filter(r=>r.ok).length;
  let skip=res.length-ok;
  document.getElementById("summary").textContent=`Acertos: ${ok} | Pulados: ${skip}`;
  let tb=document.getElementById("results");tb.innerHTML="";
  res.forEach(r=>{
-   tb.innerHTML+=`<tr><td>${r.ok?"✅":"⏭"}</td><td>${r.word}</td></tr>`;
+   tb.innerHTML+=`<tr>
+<td>${r.ok?"✅":"⏭"}</td>
+<td>${r.word}</td>
+</tr>`;
  });
 }
 let neutral=true;
 window.addEventListener("deviceorientation",e=>{
+ if(!gameStarted)return;
  const ang=(screen.orientation&&screen.orientation.type.startsWith("landscape"))?e.gamma:e.beta;
  if(ang==null)return;
  if(Math.abs(ang)<20)neutral=true;
