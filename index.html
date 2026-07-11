@@ -98,7 +98,7 @@
   <div id="menu" class="screen active">
     <h1>Quem Sou Eu?</h1>
     <div id="cats"></div>
-    <button onclick="startGame()">Iniciar</button>
+    <button>Iniciar</button>
   </div>
 
   <div id="game" class="screen">
@@ -135,7 +135,7 @@
       l.innerHTML = `<input type="checkbox" value="${c}" checked> ${c}`;
       cats.appendChild(l);
     });
-    let words = [], idx = 0, time = 60, timer, res = [], ready = false;
+    let words = [], idx = 0, time = 60, timer, res = [], ready = true;
 
     function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { let j = Math.floor(Math.random() * (i + 1));[a[i], a[j]] = [a[j], a[i]]; } return a; }
     async function startGame() {
