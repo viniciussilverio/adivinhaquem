@@ -4,115 +4,358 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Quem Sou Eu?</title>
+
 <style>
-body{margin:0;font-family:Arial,sans-serif;background:#111;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;text-align:center;transition:.2s}
-#app{width:100%;max-width:700px;padding:20px}
-button,select{font-size:18px;padding:10px 16px;border-radius:8px;border:none}
-#word{font-size:64px;font-weight:bold;margin:20px}
-.small{opacity:.8}
-.good{background:#1f8b4c}.bad{background:#8b1f1f}
-.hidden{display:none}
-#timer{font-size:28px}
-#debug{margin-top:15px;font-size:14px;opacity:.7}
+body{
+    margin:0;
+    font-family:Arial,sans-serif;
+    background:#111;
+    color:#fff;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+    text-align:center;
+    transition:.2s;
+}
+
+#app{
+    width:100%;
+    max-width:700px;
+    padding:20px;
+}
+
+button,select{
+    font-size:18px;
+    padding:10px 16px;
+    border-radius:8px;
+    border:none;
+}
+
+#word{
+    font-size:64px;
+    font-weight:bold;
+    margin:20px;
+}
+
+.small{opacity:.8;}
+.good{background:#1f8b4c;}
+.bad{background:#8b1f1f;}
+.hidden{display:none;}
+
+#timer{
+    font-size:28px;
+}
+
+#debug{
+    margin-top:15px;
+    font-size:14px;
+    opacity:.7;
+}
 </style>
 </head>
 <body>
+
 <div id="app">
-<div id="menu">
-<h1>Quem Sou Eu?</h1>
-<p>Escolha uma categoria e coloque o celular na testa.</p>
-<select id="cat"></select><br><br>
-<button id="start">Jogar</button>
-</div>
 
-<div id="game" class="hidden">
-<div id="timer">60</div>
-<div class="small">Frente = Acertou | Trás = Passou</div>
-<div id="word">...</div>
-<div id="score"></div>
-<div id="debug"></div>
-</div>
+    <div id="menu">
+        <h1>Quem Sou Eu?</h1>
+        <p>Escolha uma categoria e coloque o celular na testa.</p>
 
-<div id="end" class="hidden">
-<h2>Fim!</h2>
-<p id="result"></p>
-<div id="lists"></div><br>
-<button onclick="location.reload()">Jogar novamente</button>
-</div>
+        <select id="cat"></select>
+
+        <br><br>
+
+        <button id="start">
+            Jogar
+        </button>
+    </div>
+
+    <div id="game" class="hidden">
+        <div id="timer">60</div>
+
+        <div class="small">
+            Frente = Acertou | Trás = Passou
+        </div>
+
+        <div id="word">...</div>
+
+        <div id="score"></div>
+
+        <div id="debug"></div>
+    </div>
+
+    <div id="end" class="hidden">
+        <h2>Fim!</h2>
+
+        <p id="result"></p>
+
+        <div id="lists"></div>
+
+        <br>
+
+        <button onclick="location.reload()">
+            Jogar novamente
+        </button>
+    </div>
+
 </div>
 
 <script>
-const db={
-"Animais":["Leão","Elefante","Cachorro","Gato","Girafa","Zebra","Pinguim","Tubarão","Baleia","Macaco"],
-"Filmes":["Titanic","Avatar","Matrix","Interestelar","Gladiador","Shrek","Toy Story","Frozen","Batman","Superman"],
-"Objetos":["Computador","Celular","Cadeira","Caneta","Livro","Martelo","Relógio","Violão","Microfone","Guarda-chuva"],
-"Comidas":["Pizza","Sushi","Hambúrguer","Feijoada","Lasanha","Sorvete","Chocolate","Pipoca","Pastel","Maçã"]
+
+const db = {
+    "Animais":[
+        "Leão","Elefante","Cachorro","Gato","Girafa",
+        "Zebra","Pinguim","Tubarão","Baleia","Macaco"
+    ],
+    "Filmes":[
+        "Titanic","Avatar","Matrix","Interestelar","Gladiador",
+        "Shrek","Toy Story","Frozen","Batman","Superman"
+    ],
+    "Objetos":[
+        "Computador","Celular","Cadeira","Caneta","Livro",
+        "Martelo","Relógio","Violão","Microfone","Guarda-chuva"
+    ],
+    "Comidas":[
+        "Pizza","Sushi","Hambúrguer","Feijoada","Lasanha",
+        "Sorvete","Chocolate","Pipoca","Pastel","Maçã"
+    ]
 };
 
-const sel=document.getElementById("cat");
-Object.keys(db).forEach(c=>sel.add(new Option(c,c)));
+const sel = document.getElementById("cat");
 
-let words=[],current="",ok=[],skip=[],lock=false,time=60,timer;
+Object.keys(db).forEach(c=>{
+    sel.add(new Option(c,c));
+});
 
-function shuffle(a){for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}}
-function beep(f){const c=new(window.AudioContext||window.webkitAudioContext)();const o=c.createOscillator();const g=c.createGain();o.frequency.value=f;o.connect(g);g.connect(c.destination);o.start();g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+.15);o.stop(c.currentTime+.15);}
-function vib(){navigator.vibrate&&navigator.vibrate(120);}
-function nextWord(){document.body.className="";if(!words.length){end();return;}current=words.pop();word.textContent=current;score.textContent=`Acertos: ${ok.length} | Passou: ${skip.length}`;}
-function action(t){if(lock)return;lock=true;if(t==="ok"){ok.push(current);document.body.className="good";beep(880);}else{skip.push(current);document.body.className="bad";beep(220);}vib();setTimeout(()=>{nextWord();lock=false;},500);}
-function end(){clearInterval(timer);game.classList.add("hidden");endDiv.classList.remove("hidden");result.textContent=`Acertos: ${ok.length} | Passou: ${skip.length}`;lists.innerHTML=`<h3>Acertou</h3><p>${ok.join(", ")}</p><h3>Passou</h3><p>${skip.join(", ")}</p>`;}
+const menu = document.getElementById("menu");
+const game = document.getElementById("game");
+const endDiv = document.getElementById("end");
 
-const menu=document.getElementById("menu"),game=document.getElementById("game"),endDiv=document.getElementById("end");
-const word=document.getElementById("word"),score=document.getElementById("score"),result=document.getElementById("result"),lists=document.getElementById("lists"),timerEl=document.getElementById("timer"),debug=document.getElementById("debug");
+const word = document.getElementById("word");
+const score = document.getElementById("score");
+const result = document.getElementById("result");
+const lists = document.getElementById("lists");
+const timerEl = document.getElementById("timer");
+const debug = document.getElementById("debug");
 
-function startGame(){
- menu.classList.add("hidden");
- game.classList.remove("hidden");
- words=[...db[sel.value]];
- shuffle(words);
- nextWord();
- timer=setInterval(()=>{time--;timerEl.textContent=time;if(time<=0)end();},1000);
+let words = [];
+let current = "";
+let ok = [];
+let skip = [];
+
+let lock = false;
+let timer;
+let time = 60;
+
+function shuffle(arr){
+    for(let i=arr.length-1;i>0;i--){
+        const j=Math.floor(Math.random()*(i+1));
+        [arr[i],arr[j]]=[arr[j],arr[i]];
+    }
 }
 
-function initSensors(){
- let base=null;
- let lastAction=0;
+function beep(freq){
+    const ctx = new(window.AudioContext||window.webkitAudioContext)();
 
- window.addEventListener("deviceorientation",e=>{
-    if(e.beta==null||e.gamma==null)return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
 
-    const angle=Math.abs(e.gamma)>Math.abs(e.beta)?e.gamma:e.beta;
+    osc.frequency.value = freq;
 
-    if(base===null){
-        base=angle;
-        debug.textContent="Calibrado";
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start();
+
+    gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        ctx.currentTime + 0.15
+    );
+
+    osc.stop(ctx.currentTime + 0.15);
+}
+
+function vib(){
+    if(navigator.vibrate){
+        navigator.vibrate(120);
+    }
+}
+
+function nextWord(){
+
+    document.body.className="";
+
+    if(!words.length){
+        end();
         return;
     }
 
-    const delta=angle-base;
+    current = words.pop();
 
-    debug.textContent=`beta:${e.beta.toFixed(1)} gamma:${e.gamma.toFixed(1)} eixo:${angle.toFixed(1)} Δ:${delta.toFixed(1)}`;
+    word.textContent = current;
 
-    if(Date.now()-lastAction<1200)return;
-
-    if(delta>35){
-        lastAction=Date.now();
-        action("ok");
-        setTimeout(()=>base=angle,700);
-    }else if(delta<-35){
-        lastAction=Date.now();
-        action("skip");
-        setTimeout(()=>base=angle,700);
-    }
- });
-
- startGame();
+    score.textContent =
+        `Acertos: ${ok.length} | Passou: ${skip.length}`;
 }
 
-document.getElementById("start").onclick=()=>{
- if(typeof DeviceOrientationEvent!=="undefined"&&typeof DeviceOrientationEvent.requestPermission==="function"){
-   DeviceOrientationEvent.requestPermission().then(r=>{if(r==="granted")initSensors();});
- }else initSensors();
+function action(type){
+
+    if(lock) return;
+
+    lock = true;
+
+    if(type==="ok"){
+        ok.push(current);
+        document.body.className="good";
+        beep(880);
+    }else{
+        skip.push(current);
+        document.body.className="bad";
+        beep(220);
+    }
+
+    vib();
+
+    setTimeout(()=>{
+        nextWord();
+        lock=false;
+    },500);
+}
+
+function end(){
+
+    clearInterval(timer);
+
+    game.classList.add("hidden");
+    endDiv.classList.remove("hidden");
+
+    result.textContent =
+        `Acertos: ${ok.length} | Passou: ${skip.length}`;
+
+    lists.innerHTML = `
+        <h3>Acertou</h3>
+        <p>${ok.join(", ")}</p>
+
+        <h3>Passou</h3>
+        <p>${skip.join(", ")}</p>
+    `;
+}
+
+function startGame(){
+
+    menu.classList.add("hidden");
+    game.classList.remove("hidden");
+
+    words = [...db[sel.value]];
+
+    shuffle(words);
+
+    nextWord();
+
+    timer = setInterval(()=>{
+        time--;
+        timerEl.textContent = time;
+
+        if(time<=0){
+            end();
+        }
+    },1000);
+}
+
+function initSensors(){
+
+    let base = null;
+    let ready = false;
+    let filtered = 0;
+
+    window.addEventListener("deviceorientation", e => {
+
+        if(e.beta == null || e.gamma == null){
+            return;
+        }
+
+        const landscape =
+            window.innerWidth > window.innerHeight;
+
+        let rawValue = landscape
+            ? e.beta
+            : e.gamma;
+
+        filtered = filtered * 0.8 + rawValue * 0.2;
+
+        if(base === null){
+
+            base = filtered;
+
+            debug.textContent =
+                "Calibrado. Mantenha o celular reto.";
+
+            return;
+        }
+
+        const delta = filtered - base;
+
+        debug.textContent =
+            `Modo:${landscape ? "Landscape":"Portrait"} | ` +
+            `Valor:${filtered.toFixed(1)} | ` +
+            `Δ:${delta.toFixed(1)}`;
+
+        if(Math.abs(delta) < 15){
+            ready = true;
+        }
+
+        if(!ready){
+            return;
+        }
+
+        if(delta > 35){
+
+            ready = false;
+
+            action("ok");
+
+            setTimeout(()=>{
+                base = filtered;
+            },800);
+        }
+        else if(delta < -35){
+
+            ready = false;
+
+            action("skip");
+
+            setTimeout(()=>{
+                base = filtered;
+            },800);
+        }
+    });
+
+    startGame();
+}
+
+document.getElementById("start").onclick = ()=>{
+
+    if(
+        typeof DeviceOrientationEvent !== "undefined" &&
+        typeof DeviceOrientationEvent.requestPermission === "function"
+    ){
+
+        DeviceOrientationEvent
+            .requestPermission()
+            .then(result=>{
+
+                if(result==="granted"){
+                    initSensors();
+                }
+            })
+            .catch(console.error);
+
+    }else{
+        initSensors();
+    }
 };
+
 </script>
 </body>
 </html>
