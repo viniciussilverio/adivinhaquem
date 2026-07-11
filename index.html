@@ -186,10 +186,22 @@
       });
     }
     let neutral = true;
+    async function travarPaisagem() {
+      try {
+        // 1. Solicita o modo tela cheia
+        await document.documentElement.requestFullscreen();
+
+        // 2. Trava a tela na orientação paisagem (landscape)
+        await screen.orientation.lock('landscape');
+        console.log("Tela travada na orientação paisagem!");
+      } catch (erro) {
+        console.error("Erro ao travar a orientação: ", erro);
+      }
+    }
+
     window.addEventListener("deviceorientation", e => {
 
       if (started) {
-        document.getElementById("status").textContent = ang;
         const ang = (screen.orientation && screen.orientation.type.startsWith("landscape")) ? e.gamma : e.beta;
         if (ang == null) return;
         if (Math.abs(ang) < 20) neutral = true;
@@ -198,6 +210,7 @@
         else if (ang < -55) { neutral = false; action(true); }
       }
     });
+    travarPaisagem()
   </script>
 </body>
 
