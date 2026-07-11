@@ -37,46 +37,74 @@ button,select{font-size:18px;padding:10px 16px;border-radius:8px;border:none}
 </div>
 <script>
 const db={
-Animais:["Leão","Elefante","Cachorro","Gato","Girafa","Zebra","Pinguim","Tubarão","Baleia","Macaco"],
-Filmes:["Titanic","Avatar","Matrix","Interestelar","Gladiador","Shrek","Toy Story","Frozen","Batman","Superman"],
-Objetos:["Computador","Celular","Cadeira","Caneta","Livro","Martelo","Relógio","Violão","Microfone","Guarda-chuva"],
-Comidas:["Pizza","Sushi","Hambúrguer","Feijoada","Lasanha","Sorvete","Chocolate","Pipoca","Pastel","Maçã"]
+"Animais":["Leão","Elefante","Cachorro","Gato","Girafa","Zebra","Pinguim","Tubarão","Baleia","Macaco"],
+"Filmes":["Titanic","Avatar","Matrix","Interestelar","Gladiador","Shrek","Toy Story","Frozen","Batman","Superman"],
+"Objetos":["Computador","Celular","Cadeira","Caneta","Livro","Martelo","Relógio","Violão","Microfone","Guarda-chuva"],
+"Comidas":["Pizza","Sushi","Hambúrguer","Feijoada","Lasanha","Sorvete","Chocolate","Pipoca","Pastel","Maçã"]
 };
-const sel=cat;Object.keys(db).forEach(c=>sel.add(new Option(c,c)));
-const menu=menu,game=document.getElementById("game"),endDiv=end;
-const word=document.getElementById("word"),score=document.getElementById("score"),result=document.getElementById("result"),lists=document.getElementById("lists"),timerEl=document.getElementById("timer"),debug=document.getElementById("debug");
+
+const sel=document.getElementById("cat");
+Object.keys(db).forEach(c=>sel.add(new Option(c,c)));
+
+const menu=document.getElementById("menu");
+const game=document.getElementById("game");
+const endDiv=document.getElementById("end");
+const word=document.getElementById("word");
+const score=document.getElementById("score");
+const result=document.getElementById("result");
+const lists=document.getElementById("lists");
+const timerEl=document.getElementById("timer");
+const debug=document.getElementById("debug");
+
 let words=[],current="",ok=[],skip=[],lock=false,timer,time=60;
+
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}}
-const audio=new (window.AudioContext||window.webkitAudioContext)();
-function beep(f){const o=audio.createOscillator(),g=audio.createGain();o.frequency.value=f;o.connect(g);g.connect(audio.destination);o.start();g.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+.15);o.stop(audio.currentTime+.15);}
-function vib(){navigator.vibrate&&navigator.vibrate(120);}
+const ctx=new (window.AudioContext||window.webkitAudioContext)();
+function beep(f){const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=f;o.connect(g);g.connect(ctx.destination);o.start();g.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+.15);o.stop(ctx.currentTime+.15);}
+function vib(){if(navigator.vibrate)navigator.vibrate(120);}
 function nextWord(){document.body.className="";if(!words.length){endGame();return;}current=words.pop();word.textContent=current;score.textContent=`Acertos: ${ok.length} | Passou: ${skip.length}`;}
 function action(t){if(lock)return;lock=true;if(t==="ok"){ok.push(current);document.body.className="good";beep(880);}else{skip.push(current);document.body.className="bad";beep(220);}vib();setTimeout(()=>{nextWord();lock=false;},500);}
-function endGame(){clearInterval(timer);game.classList.add("hidden");endDiv.classList.remove("hidden");result.textContent=`Acertos: ${ok.length} | Passou: ${skip.length}`;lists.innerHTML=`<h3>Acertou</h3><p>${ok.join(", ")}</p><h3>Passou</h3><p>${skip.join(", ")}</p>`;}
-function startGame(){document.getElementById("menu").classList.add("hidden");game.classList.remove("hidden");words=[...db[sel.value]];shuffle(words);nextWord();timer=setInterval(()=>{timerEl.textContent=--time;if(time<=0)endGame();},1000);}
+function endGame(){clearInterval(timer);game.classList.add("hidden");endDiv.classList.remove("hidden");result.textContent=`Acertos: ${ok.length} | Passou: ${skip.length}`;lists.innerHTML=`<h3>Acertou</h3><p>${ok.join(", ")}</p><h3>Passou</p><p>${skip.join(", ")}</p>`;}
+function startGame(){
+ menu.classList.add("hidden");
+ game.classList.remove("hidden");
+ time=60;
+ timerEl.textContent=time;
+ words=[...db[sel.value]];
+ shuffle(words);
+ nextWord();
+ timer=setInterval(()=>{time--;timerEl.textContent=time;if(time<=0)endGame();},1000);
+}
+
 function initSensors(){
  let base=null,filtered=0,state="CENTER";
- window.addEventListener("deviceorientation",e=>{
+ window.addEventListener("deviceorientation",function(e){
    if(e.beta==null||e.gamma==null)return;
-   const raw=(innerWidth>innerHeight)?e.beta:e.gamma;
+   const raw=(window.innerWidth>window.innerHeight)?e.beta:e.gamma;
    filtered=filtered*0.8+raw*0.2;
-   if(base===null){base=filtered;debug.textContent="Calibrado";return;}
+   if(base===null){base=filtered;debug.textContent="Calibrado.";return;}
    let delta=filtered-base;
-   if(state==="CENTER" && Math.abs(delta)<10){base=base*0.98+filtered*0.02;delta=filtered-base;}
-   debug.textContent=`Valor:${filtered.toFixed(1)} Δ:${delta.toFixed(1)} Estado:${state}`;
+   if(state==="CENTER" && Math.abs(delta)<10){
+      base=base*0.98+filtered*0.02;
+      delta=filtered-base;
+   }
+   debug.textContent=`Δ ${delta.toFixed(1)} | ${state}`;
    if(state==="CENTER"){
-      if(delta>35){state="WAIT_CENTER";action("ok");}
-      else if(delta<-35){state="WAIT_CENTER";action("skip");}
+      if(delta>35){state="WAIT";action("ok");}
+      else if(delta<-35){state="WAIT";action("skip");}
    }else{
-      if(Math.abs(delta)<15){state="CENTER";}
+      if(Math.abs(delta)<15) state="CENTER";
    }
  });
  startGame();
 }
-start.onclick=()=>{
- if(typeof DeviceOrientationEvent!=="undefined"&&typeof DeviceOrientationEvent.requestPermission==="function"){
+
+document.getElementById("start").onclick=function(){
+ if(typeof DeviceOrientationEvent!=="undefined" && typeof DeviceOrientationEvent.requestPermission==="function"){
    DeviceOrientationEvent.requestPermission().then(r=>{if(r==="granted")initSensors();});
- }else initSensors();
+ }else{
+   initSensors();
+ }
 };
 </script>
 </body>
