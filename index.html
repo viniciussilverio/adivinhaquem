@@ -2,82 +2,112 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Quem Sou Eu?</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Quem Sou Eu</title>
 <style>
-body{margin:0;font-family:Arial,sans-serif;background:#111;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;text-align:center;transition:.2s}
-#app{width:100%;max-width:700px;padding:20px}
-button,select{font-size:18px;padding:10px 16px;border-radius:8px;border:none}
-#word{font-size:64px;font-weight:bold;margin:20px}
-.small{opacity:.8}.good{background:#1f8b4c}.bad{background:#8b1f1f}.hidden{display:none}
-#timer{font-size:28px}#debug{margin-top:15px;font-size:14px;opacity:.7}
+html,body{margin:0;height:100%;font-family:Arial,sans-serif;background:#111;color:#fff;overflow:hidden}
+.screen{display:none;height:100%;padding:20px;box-sizing:border-box}
+.active{display:flex;flex-direction:column;align-items:center;justify-content:center}
+h1{margin:10px}
+button{padding:14px 24px;border:none;border-radius:12px;background:#0a84ff;color:#fff;font-size:18px;cursor:pointer}
+label{display:block;margin:8px;font-size:20px}
+#timer{position:absolute;top:15px;left:50%;transform:translateX(-50%);font-size:36px}
+#word{font-size:min(12vw,80px);font-weight:bold;text-align:center;padding:20px}
+#status{position:absolute;bottom:20px;font-size:22px;opacity:.8}
+.ok{background:#1b5e20!important}.skip{background:#8b0000!important}
+table{border-collapse:collapse;width:100%;max-width:600px}
+td,th{border:1px solid #555;padding:8px}
 </style>
 </head>
 <body>
-<div id="app">
-<div id="menu">
+<div id="menu" class="screen active">
 <h1>Quem Sou Eu?</h1>
-<p>Escolha uma categoria e coloque o celular na testa.</p>
-<select id="cat"></select><br><br>
-<button id="start">Jogar</button>
+<div id="cats"></div>
+<button onclick="startGame()">Iniciar</button>
 </div>
-<div id="game" class="hidden">
+
+<div id="game" class="screen">
 <div id="timer">60</div>
-<div class="small">Frente = Acertou | Trás = Passou</div>
-<div id="word">...</div>
-<div id="score"></div>
-<div id="debug"></div>
+<div id="word"></div>
+<div id="status">Incline para cima = Acertou | para baixo = Pulou</div>
 </div>
-<div id="end" class="hidden">
-<h2>Fim!</h2>
-<p id="result"></p>
-<div id="lists"></div><br>
-<button onclick="location.reload()">Jogar novamente</button>
+
+<div id="end" class="screen">
+<h1>Fim!</h1>
+<h2 id="summary"></h2>
+<table><thead><tr><th>Resultado</th><th>Item</th></tr></thead><tbody id="results"></tbody></table>
+<br><button onclick="location.reload()">Jogar novamente</button>
 </div>
-</div>
+
 <script>
-const db={
-Animais:["Leão","Elefante","Cachorro","Gato","Girafa","Zebra","Pinguim","Tubarão","Baleia","Macaco"],
-Filmes:["Titanic","Avatar","Matrix","Interestelar","Gladiador","Shrek","Toy Story","Frozen","Batman","Superman"],
-Objetos:["Computador","Celular","Cadeira","Caneta","Livro","Martelo","Relógio","Violão","Microfone","Guarda-chuva"],
-Comidas:["Pizza","Sushi","Hambúrguer","Feijoada","Lasanha","Sorvete","Chocolate","Pipoca","Pastel","Maçã"]
+const DATABASE={
+animais:["Cachorro","Gato","Elefante","Leão","Tigre","Macaco","Girafa","Pinguim","Tubarão","Jacaré","Cobra","Urso"],
+objetos:["Martelo","Geladeira","Computador","Celular","Mesa","Cadeira","Escova","Livro","Caneta","Relógio","Microfone","Lâmpada"],
+paises:["Brasil","Japão","Canadá","Argentina","Portugal","China","Índia","Egito","Chile","México","Noruega","Austrália"],
+profissoes:["Médico","Professor","Bombeiro","Policial","Programador","Arquiteto","Piloto","Dentista","Advogado","Engenheiro","Cozinheiro","Jornalista"]
 };
-const sel=cat;Object.keys(db).forEach(c=>sel.add(new Option(c,c)));
-const menu=menu,game=document.getElementById("game"),endDiv=end;
-const word=document.getElementById("word"),score=document.getElementById("score"),result=document.getElementById("result"),lists=document.getElementById("lists"),timerEl=document.getElementById("timer"),debug=document.getElementById("debug");
-let words=[],current="",ok=[],skip=[],lock=false,timer,time=60;
-function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}}
-const audio=new (window.AudioContext||window.webkitAudioContext)();
-function beep(f){const o=audio.createOscillator(),g=audio.createGain();o.frequency.value=f;o.connect(g);g.connect(audio.destination);o.start();g.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+.15);o.stop(audio.currentTime+.15);}
-function vib(){navigator.vibrate&&navigator.vibrate(120);}
-function nextWord(){document.body.className="";if(!words.length){endGame();return;}current=words.pop();word.textContent=current;score.textContent=`Acertos: ${ok.length} | Passou: ${skip.length}`;}
-function action(t){if(lock)return;lock=true;if(t==="ok"){ok.push(current);document.body.className="good";beep(880);}else{skip.push(current);document.body.className="bad";beep(220);}vib();setTimeout(()=>{nextWord();lock=false;},500);}
-function endGame(){clearInterval(timer);game.classList.add("hidden");endDiv.classList.remove("hidden");result.textContent=`Acertos: ${ok.length} | Passou: ${skip.length}`;lists.innerHTML=`<h3>Acertou</h3><p>${ok.join(", ")}</p><h3>Passou</h3><p>${skip.join(", ")}</p>`;}
-function startGame(){document.getElementById("menu").classList.add("hidden");game.classList.remove("hidden");words=[...db[sel.value]];shuffle(words);nextWord();timer=setInterval(()=>{timerEl.textContent=--time;if(time<=0)endGame();},1000);}
-function initSensors(){
- let base=null,filtered=0,state="CENTER";
- window.addEventListener("deviceorientation",e=>{
-   if(e.beta==null||e.gamma==null)return;
-   const raw=(innerWidth>innerHeight)?e.beta:e.gamma;
-   filtered=filtered*0.8+raw*0.2;
-   if(base===null){base=filtered;debug.textContent="Calibrado";return;}
-   let delta=filtered-base;
-   if(state==="CENTER" && Math.abs(delta)<10){base=base*0.98+filtered*0.02;delta=filtered-base;}
-   debug.textContent=`Valor:${filtered.toFixed(1)} Δ:${delta.toFixed(1)} Estado:${state}`;
-   if(state==="CENTER"){
-      if(delta>35){state="WAIT_CENTER";action("ok");}
-      else if(delta<-35){state="WAIT_CENTER";action("skip");}
-   }else{
-      if(Math.abs(delta)<15){state="CENTER";}
-   }
- });
- startGame();
+const cats=document.getElementById("cats");
+Object.keys(DATABASE).forEach(c=>{
+ const l=document.createElement("label");
+ l.innerHTML=`<input type="checkbox" value="${c}" checked> ${c}`;
+ cats.appendChild(l);
+});
+let words=[],idx=0,time=60,timer,res=[],ready=true;
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+async function startGame(){
+ if(DeviceOrientationEvent&&DeviceOrientationEvent.requestPermission){
+   try{await DeviceOrientationEvent.requestPermission();}catch(e){}
+ }
+ if(document.documentElement.requestFullscreen){document.documentElement.requestFullscreen().catch(()=>{});}
+ words=[];
+ document.querySelectorAll("#cats input:checked").forEach(c=>words.push(...DATABASE[c.value]));
+ words=shuffle(words);
+ idx=0;res=[];time=60;
+ show("game");nextWord();
+ timer=setInterval(()=>{
+   document.getElementById("timer").textContent=--time;
+   if(time<=0){clearInterval(timer);finish();}
+ },1000);
 }
-start.onclick=()=>{
- if(typeof DeviceOrientationEvent!=="undefined"&&typeof DeviceOrientationEvent.requestPermission==="function"){
-   DeviceOrientationEvent.requestPermission().then(r=>{if(r==="granted")initSensors();});
- }else initSensors();
-};
+function show(id){
+ document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+ document.getElementById(id).classList.add("active");
+}
+function nextWord(){
+ if(idx>=words.length){finish();return;}
+ document.body.className="";
+ document.getElementById("word").textContent=words[idx];
+ if(navigator.vibrate)navigator.vibrate(40);
+}
+function action(ok){
+ if(!ready)return;
+ ready=false;
+ res.push({word:words[idx],ok});
+ document.body.className=ok?"ok":"skip";
+ idx++;
+ setTimeout(()=>{nextWord();ready=true;},500);
+}
+function finish(){
+ clearInterval(timer);
+ show("end");
+ let ok=res.filter(r=>r.ok).length;
+ let skip=res.length-ok;
+ document.getElementById("summary").textContent=`Acertos: ${ok} | Pulados: ${skip}`;
+ let tb=document.getElementById("results");tb.innerHTML="";
+ res.forEach(r=>{
+   tb.innerHTML+=`<tr><td>${r.ok?"✅":"⏭"}</td><td>${r.word}</td></tr>`;
+ });
+}
+let neutral=true;
+window.addEventListener("deviceorientation",e=>{
+ const ang=(screen.orientation&&screen.orientation.type.startsWith("landscape"))?e.gamma:e.beta;
+ if(ang==null)return;
+ if(Math.abs(ang)<20)neutral=true;
+ if(!neutral)return;
+ if(ang>55){neutral=false;action(true);}
+ else if(ang<-55){neutral=false;action(false);}
+});
 </script>
 </body>
 </html>
