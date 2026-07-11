@@ -2,23 +2,19 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Quem Sou Eu?</title>
 
 <style>
-
 body{
     margin:0;
+    font-family:Arial,sans-serif;
     background:#111;
     color:#fff;
-    font-family:Arial,sans-serif;
-    min-height:100vh;
-
     display:flex;
     justify-content:center;
     align-items:center;
-
+    min-height:100vh;
     text-align:center;
 }
 
@@ -28,40 +24,66 @@ body{
     padding:20px;
 }
 
-h1{
-    font-size:60px;
-    margin-bottom:30px;
+.hidden{
+    display:none;
 }
 
-p{
+select,
+button{
     font-size:20px;
+    padding:12px;
+    border-radius:10px;
+    border:none;
 }
 
 select{
-    width:280px;
-    height:60px;
-    font-size:22px;
-    border-radius:10px;
-    padding:10px;
-    margin-top:20px;
+    width:260px;
+    margin:10px;
 }
 
 button{
-    margin-top:20px;
-    width:180px;
-    height:60px;
-    font-size:22px;
-    border:none;
-    border-radius:12px;
     cursor:pointer;
 }
 
+#word{
+    font-size:56px;
+    font-weight:bold;
+    margin:25px 0;
+}
+
+#timer{
+    font-size:32px;
+}
+
+.good{
+    background:#198754;
+}
+
+.bad{
+    background:#dc3545;
+}
+
+#controls{
+    margin-top:20px;
+}
+
+#controls button{
+    width:150px;
+    margin:5px;
+}
+
+#debug{
+    margin-top:20px;
+    font-size:12px;
+    opacity:.7;
+}
 </style>
 </head>
-
 <body>
 
 <div id="app">
+
+<div id="menu">
 
     <h1>Quem Sou Eu?</h1>
 
@@ -82,60 +104,230 @@ button{
 
 </div>
 
+<div id="game" class="hidden">
+
+    <div id="timer">60</div>
+
+    <div id="word">...</div>
+
+    <div id="score"></div>
+
+    <div id="controls">
+        <button id="btnOk">✅ Acertou</button>
+        <button id="btnSkip">⏭ Passou</button>
+    </div>
+
+    <div id="debug"></div>
+
+</div>
+
+<div id="end" class="hidden">
+
+    <h2>Fim de jogo</h2>
+
+    <p id="result"></p>
+
+    <div id="lists"></div>
+
+    <br>
+
+    <button onclick="location.reload()">
+        Jogar novamente
+    </button>
+
+</div>
+
+</div>
+
 <script>
 
 const db = {
-
     Animais:[
-        "Leão",
-        "Elefante",
-        "Cachorro"
+        "Leão","Elefante","Cachorro","Gato","Girafa",
+        "Zebra","Pinguim","Tubarão","Baleia","Macaco"
     ],
-
     Filmes:[
-        "Titanic",
-        "Avatar",
-        "Matrix"
+        "Titanic","Avatar","Matrix","Interestelar",
+        "Gladiador","Shrek","Frozen","Batman"
     ],
-
-    Comidas:[
-        "Pizza",
-        "Sushi",
-        "Pastel"
-    ],
-
     Objetos:[
-        "Livro",
-        "Caneta",
-        "Celular"
+        "Computador","Celular","Livro","Caneta",
+        "Martelo","Violão","Microfone"
+    ],
+    Comidas:[
+        "Pizza","Sushi","Lasanha","Chocolate",
+        "Pipoca","Pastel","Hambúrguer"
     ]
 };
 
-const select = document.getElementById("cat");
+const sel = document.getElementById("cat");
 
-Object.keys(db).forEach(categoria => {
-
+for(const categoria of Object.keys(db)){
     const option = document.createElement("option");
-
     option.value = categoria;
     option.textContent = categoria;
+    sel.appendChild(option);
+}
 
-    select.appendChild(option);
+const menu = document.getElementById("menu");
+const game = document.getElementById("game");
+const endDiv = document.getElementById("end");
 
-});
+const wordEl = document.getElementById("word");
+const scoreEl = document.getElementById("score");
+const timerEl = document.getElementById("timer");
+const resultEl = document.getElementById("result");
+const listsEl = document.getElementById("lists");
+const debugEl = document.getElementById("debug");
 
-document.getElementById("start").addEventListener("click", () => {
+let words = [];
+let currentWord = "";
+let ok = [];
+let skip = [];
+let time = 60;
+let timer = null;
 
-    if(!select.value){
+function shuffle(arr){
+    for(let i=arr.length-1;i>0;i--){
+        const j=Math.floor(Math.random()*(i+1));
+        [arr[i],arr[j]]=[arr[j],arr[i]];
+    }
+}
 
-        alert("Escolha uma categoria.");
+function updateScore(){
+    scoreEl.textContent =
+        `Acertos: ${ok.length} | Passou: ${skip.length}`;
+}
 
+function nextWord(){
+
+    document.body.className="";
+
+    if(words.length===0){
+        finishGame();
         return;
     }
 
-    alert("Categoria selecionada: " + select.value);
+    currentWord = words.pop();
+    wordEl.textContent = currentWord;
 
-});
+    updateScore();
+}
+
+function answer(type){
+
+    if(type==="ok"){
+        ok.push(currentWord);
+        document.body.className="good";
+    }else{
+        skip.push(currentWord);
+        document.body.className="bad";
+    }
+
+    setTimeout(nextWord,500);
+}
+
+function finishGame(){
+
+    clearInterval(timer);
+
+    game.classList.add("hidden");
+    endDiv.classList.remove("hidden");
+
+    resultEl.textContent =
+        `Acertos: ${ok.length} | Passou: ${skip.length}`;
+
+    listsEl.innerHTML = `
+        <h3>Acertou</h3>
+        <p>${ok.join(", ")}</p>
+
+        <h3>Passou</h3>
+        <p>${skip.join(", ")}</p>
+    `;
+}
+
+function startGame(){
+
+    menu.classList.add("hidden");
+    game.classList.remove("hidden");
+
+    words=[...db[sel.value]];
+    shuffle(words);
+
+    nextWord();
+
+    timer = setInterval(()=>{
+
+        time--;
+
+        timerEl.textContent=time;
+
+        if(time<=0){
+            finishGame();
+        }
+
+    },1000);
+}
+
+document.getElementById("btnOk").onclick =
+    ()=>answer("ok");
+
+document.getElementById("btnSkip").onclick =
+    ()=>answer("skip");
+
+document.getElementById("start").onclick = async ()=>{
+
+    if(!sel.value){
+        alert("Escolha uma categoria.");
+        return;
+    }
+
+    startGame();
+
+    // SENSOR OPCIONAL
+    let neutral = null;
+    let state = "CENTER";
+
+    window.addEventListener("deviceorientation", e => {
+
+        if(e.beta == null) return;
+
+        if(neutral === null){
+            neutral = e.beta;
+            return;
+        }
+
+        const delta = e.beta - neutral;
+
+        debugEl.textContent =
+            `β=${e.beta.toFixed(1)} Δ=${delta.toFixed(1)} ${state}`;
+
+        if(state !== "CENTER"){
+
+            if(Math.abs(delta) < 15){
+                state = "CENTER";
+            }
+
+            return;
+        }
+
+        if(delta > 35){
+
+            state = "LOCK";
+            answer("ok");
+            return;
+        }
+
+        if(delta < -35){
+
+            state = "LOCK";
+            answer("skip");
+            return;
+        }
+
+    });
+
+};
 
 </script>
 
