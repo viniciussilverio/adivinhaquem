@@ -147,7 +147,7 @@
       document.querySelectorAll("#cats input:checked").forEach(c => words.push(...DATABASE[c.value]));
       words = shuffle(words);
       idx = 0; res = []; time = 60;
-      started = false;
+      started = true;
       show("game"); nextWord();
       timer = setInterval(() => {
         document.getElementById("timer").textContent = --time;
